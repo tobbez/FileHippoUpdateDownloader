@@ -1,0 +1,13 @@
+FileHippoUpdateDownloader
+
+Utility that downloads updates found by the FileHippo Update Checker.
+
+To use, open the Update Checker's settings, and set the Custom Browser
+option to 'DRIVE:\path\to\FileHippoUpdateDownloader.exe %1'.
+
+The updates found are downloaded into a directory called
+DownloadedUpdates in the folder where FileHippoUpdateDownloader.exe
+resides.
+
+
+The Update Checker can be found at http://filehippo.com/updatechecker/
