@@ -23,7 +23,7 @@ namespace FileHippoUpdateDownloader
             if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
 
             string statusPage = GetPageContents(args[0]);
-            Regex regexOverviewPage = new Regex(@"""(http://www\.filehippo\.com/download_([^/]+)/(\d+/)?download/[0-9a-f]+/)""", RegexOptions.Compiled);
+            Regex regexOverviewPage = new Regex(@"""(http://filehippo\.com/download_([^/]+)/(\d+/)?download/[0-9a-f]+/)""", RegexOptions.Compiled);
             Regex regexDownloadPage = new Regex(@"href=""(/download/file/[^/]+/)""", RegexOptions.Compiled);
 
             List<KeyValuePair<string, string>> urls = new List<KeyValuePair<string, string>>();
