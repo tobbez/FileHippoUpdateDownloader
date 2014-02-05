@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.IO;
 using System.Text.RegularExpressions;
+using HtmlAgilityPack;
 
 namespace FileHippoUpdateDownloader
 {
@@ -23,27 +24,17 @@ namespace FileHippoUpdateDownloader
             if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
 
             string statusPage = GetPageContents(args[0]);
-            Regex regexOverviewPage = new Regex(@"""(http://filehippo\.com/download_([^/]+)/(\d+/)?download/[0-9a-f]+/)""", RegexOptions.Compiled);
-            Regex regexDownloadPage = new Regex(@"href=""(/download/file/[^/]+/)""", RegexOptions.Compiled);
 
-            List<KeyValuePair<string, string>> urls = new List<KeyValuePair<string, string>>();
-            foreach (Match m in regexOverviewPage.Matches(statusPage))
+            
+            List<DownloadDescription> downloadDescriptions = GetDownloadDescriptions(statusPage);
+
+            Console.WriteLine("Number of updates: " + downloadDescriptions.Count);
+
+            foreach (DownloadDescription d in downloadDescriptions)
             {
-                urls.Add(new KeyValuePair<string, string>(m.Groups[2].Value, m.Groups[1].Value));
+                DownloadUsingDescription(d, directory);
             }
 
-            Console.WriteLine("Number of updates: " + urls.Count);
-
-            WebClient wc = new WebClient();
-            for (int i = 0; i < urls.Count; i++)
-            {
-                Console.WriteLine("({1," + urls.Count.ToString().Length + "}/{2}) Getting download URL for {0}...", urls[i].Key, i + 1, urls.Count);
-                string programPage = GetPageContents(urls[i].Value);
-                string realUrl = GetRedirectTarget("http://www.filehippo.com" + regexDownloadPage.Match(programPage).Groups[1].Value);
-                string filename = System.IO.Path.GetFileName(realUrl);
-                Console.WriteLine("({0," + urls.Count.ToString().Length + "}/{1}) Downloading {2}...", i + 1, urls.Count, filename);
-                wc.DownloadFile(realUrl, System.IO.Path.Combine(directory, filename));
-            }
             Console.WriteLine("Done!");
             Console.ReadKey(true);
         }
@@ -61,6 +52,64 @@ namespace FileHippoUpdateDownloader
             request.AllowAutoRedirect = false;
             HttpWebResponse response = (HttpWebResponse)request.GetResponse();
             return response.Headers.Get("Location");
+        }
+
+        struct DownloadDescription
+        {
+            public string program;
+            public string installedVersion;
+            public string installPath;
+            public Int64 fileSize;
+            public string iconUrl;
+            public string downloadPageLink;
+
+            override public string ToString()
+            {
+                return program;
+            }
+        }
+
+        static List<DownloadDescription> GetDownloadDescriptions(string html)
+        {
+            HtmlDocument doc = new HtmlDocument();
+            doc.LoadHtml(html);
+
+            List<DownloadDescription> results = new List<DownloadDescription>();
+
+            foreach (HtmlNode n in doc.DocumentNode.SelectNodes("//ul[@class='result-list']//li[not(contains(@class, 'installed')) and not(contains(@class, 'beta'))]"))
+            {
+                DownloadDescription d;
+                d.program = n.SelectSingleNode(".//span[@class='program-name']").InnerText.Trim();
+                d.installedVersion = n.SelectSingleNode(".//span[@class='installed-version']").InnerText.Trim();
+                d.installPath = n.SelectSingleNode(".//span[@class='install-path']").InnerText.Trim();
+                d.fileSize = Int64.Parse(n.GetAttributeValue("data-filesize", "-1"));
+                d.iconUrl = n.SelectSingleNode(".//span[@class='program-name']//img").GetAttributeValue("src", "");
+                d.downloadPageLink = n.SelectSingleNode(".//a[@class='update-download-link']").GetAttributeValue("href", "");
+                results.Add(d);
+            }
+
+            return results;
+        }
+
+        /// <summary>
+        /// Downloads the file described by the DownloadDescription into the specified directory.
+        /// </summary>
+        /// <param name="d">A DownloadDescription for the file to download.</param>
+        /// <param name="directory">The directory the file will be downloaded into.</param>
+        static void DownloadUsingDescription(DownloadDescription d, string directory)
+        {
+            Regex regexDownloadPage = new Regex(@"href=""(/download/file/[^/]+/)""", RegexOptions.Compiled);
+            WebClient wc = new WebClient();
+
+            Console.Write("Getting download link for {0}...", d.program);
+            string downloadPage = GetPageContents(d.downloadPageLink);
+            string downloadUrl = GetRedirectTarget("http://www.filehippo.com" + regexDownloadPage.Match(downloadPage).Groups[1].Value);
+            string filename = System.IO.Path.GetFileName(downloadUrl);
+
+            Console.Write("\r                                                                                       ");
+            Console.Write("\rDownloading {0} ({1}K)... ", d.program, d.fileSize/1024);
+            wc.DownloadFile(downloadUrl, System.IO.Path.Combine(directory, filename));
+            Console.WriteLine("Complete");
         }
     }
 }

@@ -1,2 +1,5 @@
 FileHippoUpdateDownloader.suo
 FileHippoUpdateDownloader.v11.suo
+/packages/HtmlAgilityPack.1.4.6
+/FileHippoUpdateDownloader/bin
+/FileHippoUpdateDownloader/obj
