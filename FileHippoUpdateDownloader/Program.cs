@@ -103,12 +103,12 @@ namespace FileHippoUpdateDownloader
 
             Console.Write("Getting download link for {0}...", d.program);
             string downloadPage = GetPageContents(d.downloadPageLink);
-            string downloadUrl = GetRedirectTarget("http://www.filehippo.com" + regexDownloadPage.Match(downloadPage).Groups[1].Value);
+            string downloadUrl = GetRedirectTarget("http://filehippo.com" + regexDownloadPage.Match(downloadPage).Groups[1].Value);
             string filename = System.IO.Path.GetFileName(downloadUrl);
 
             Console.Write("\r                                                                                       ");
             Console.Write("\rDownloading {0} ({1}K)... ", d.program, d.fileSize/1024);
-            wc.DownloadFile(downloadUrl, System.IO.Path.Combine(directory, filename));
+            wc.DownloadFile(downloadUrl, System.IO.Path.Combine(directory, filename.Split('?')[0]));
             Console.WriteLine("Complete");
         }
     }
